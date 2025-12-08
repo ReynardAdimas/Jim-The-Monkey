@@ -1,8 +1,11 @@
 import pygame
 import sys
 import random
+import os 
+
 
 pygame.init()
+pygame.mixer.init()  
 
 # Warna
 BLACK = (20, 20, 20)
@@ -10,7 +13,7 @@ WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 
-# Icon Environment
+# EMOJI ICONS
 ICON_PLAYER = "🐒"
 ICON_NPC = "👻"
 ICON_BANANA = "🍌"
@@ -25,22 +28,63 @@ font_icon = None
 # Global Variables
 screen = None
 MAP_DATA = []
-MAP_WIDTH = 0
-MAP_HEIGHT = 0
-tile_size = 30
-screen_width = 0
-screen_height = 0
+MAP_WIDTH = 0; MAP_HEIGHT = 0; tile_size = 30
+screen_width = 0; screen_height = 0
 
 # Entity
-player_grid_x = 0
-player_grid_y = 0
+player_grid_x = 0; player_grid_y = 0
 npcs = [] 
 
 # Status
-total_bananas = 0
-score = 0
-game_won = False
-game_over = False
+total_bananas = 0; score = 0
+game_won = False; game_over = False
+door_unlocked_sound_played = False 
+
+# --- BAGIAN AUDIO MANAGER ---
+class AudioManager:
+    def __init__(self):
+        self.sounds = {}
+        self.bgm_file = "bgm.mp3" # Background Music
+        
+        # Load SFX (Sound Effects)
+        self.load_sfx("eat", "eat.wav")
+        self.load_sfx("die", "die.wav")
+        self.load_sfx("win", "win.wav")
+        self.load_sfx("unlock", "unlock.mp3")
+
+    def load_sfx(self, name, filename):
+        if os.path.exists(filename):
+            try:
+                self.sounds[name] = pygame.mixer.Sound(filename)
+                self.sounds[name].set_volume(0.6) 
+            except:
+                print(f"Warning: Gagal load {filename}")
+                self.sounds[name] = None
+        else:
+            print(f"Info: File {filename} tidak ditemukan. SFX '{name}' dimatikan.")
+            self.sounds[name] = None
+
+    def play_sfx(self, name):
+        """Memainkan SFX jika filenya ada"""
+        if name in self.sounds and self.sounds[name] is not None:
+            self.sounds[name].play()
+
+    def play_bgm(self):
+        """Memainkan Background Music"""
+        if os.path.exists(self.bgm_file):
+            try:
+                pygame.mixer.music.load(self.bgm_file)
+                pygame.mixer.music.set_volume(0.4) 
+                pygame.mixer.music.play(-1) 
+            except:
+                print("Gagal memutar BGM")
+
+    def stop_bgm(self):
+        pygame.mixer.music.stop()
+
+audio = AudioManager()
+
+
 
 def generate_maze_layout(rows, cols):
     layout = [['1' for _ in range(cols)] for _ in range(rows)]
@@ -71,15 +115,11 @@ def draw_emoji(surface, text, grid_x, grid_y, color=(255, 255, 255)):
 
 def render_game_content(target_surface):
     target_surface.fill(BLACK)
-    
-    # Gambar Map
     for r in range(MAP_HEIGHT):
         for c in range(MAP_WIDTH):
             char = MAP_DATA[r][c]
-            if char == '1': 
-                draw_emoji(target_surface, ICON_WALL, c, r, (100, 100, 100))
-            elif char == '2': 
-                draw_emoji(target_surface, ICON_BANANA, c, r, (255, 255, 0))
+            if char == '1': draw_emoji(target_surface, ICON_WALL, c, r, (100, 100, 100))
+            elif char == '2': draw_emoji(target_surface, ICON_BANANA, c, r, (255, 255, 0))
             elif char == '3': 
                 if score == total_bananas:
                     draw_emoji(target_surface, ICON_DOOR_OPEN, c, r, (0, 255, 0))
@@ -87,23 +127,17 @@ def render_game_content(target_surface):
                     draw_emoji(target_surface, ICON_DOOR_LOCKED, c, r, (255, 0, 0))
             elif char == '0': 
                  pygame.draw.circle(target_surface, (40, 40, 40), (c * tile_size + tile_size//2, r * tile_size + tile_size//2), 2)
-
-    # Gambar Player
     draw_emoji(target_surface, ICON_PLAYER, player_grid_x, player_grid_y)
-    
-    # Gambar NPCs
     for npc in npcs:
         draw_emoji(target_surface, ICON_NPC, npc[1], npc[0])
 
 def play_zoom_animation():
     full_map_surface = pygame.Surface((screen_width, screen_height))
     render_game_content(full_map_surface)
-    
     clock = pygame.time.Clock()
     
-    start_zoom = 0.15 
-    current_zoom = start_zoom
-    zoom_speed = 0.015 
+    current_zoom = 0.15
+    zoom_speed = 0.02
     
     player_pixel_x = player_grid_x * tile_size + tile_size // 2
     player_pixel_y = player_grid_y * tile_size + tile_size // 2
@@ -111,23 +145,19 @@ def play_zoom_animation():
     animating = True
     while animating:
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit(); sys.exit()
-            if event.type == pygame.KEYDOWN:
-                animating = False 
+            if event.type == pygame.QUIT: pygame.quit(); sys.exit()
+            if event.type == pygame.KEYDOWN: animating = False 
         
         current_zoom += zoom_speed
         if current_zoom >= 1.0:
             current_zoom = 1.0
             animating = False 
             
-        # Camera
         view_w = screen_width * current_zoom
         view_h = screen_height * current_zoom
-
         view_x = player_pixel_x - (view_w / 2)
         view_y = player_pixel_y - (view_h / 2)
-
+        
         if view_x < 0: view_x = 0
         if view_y < 0: view_y = 0
         if view_x + view_w > screen_width: view_x = screen_width - view_w
@@ -135,14 +165,11 @@ def play_zoom_animation():
         
         camera_rect = pygame.Rect(int(view_x), int(view_y), int(view_w), int(view_h))
         sub_surface = full_map_surface.subsurface(camera_rect)
-        
         scaled_surface = pygame.transform.smoothscale(sub_surface, (screen_width, screen_height))
-        
         screen.blit(scaled_surface, (0, 0))
-
+        
         if current_zoom < 0.9:
-            skip_text = font_score.render("Press any key to skip", True, WHITE)
-            screen.blit(skip_text, (10, 10))
+            screen.blit(font_score.render("Zooming...", True, WHITE), (10, 10))
             
         pygame.display.flip()
         clock.tick(60)
@@ -150,60 +177,54 @@ def play_zoom_animation():
 def reset_game():
     global MAP_DATA, MAP_WIDTH, MAP_HEIGHT, tile_size, screen, screen_width, screen_height
     global player_grid_x, player_grid_y, npcs, font_icon
-    global total_bananas, score, game_won, game_over
+    global total_bananas, score, game_won, game_over, door_unlocked_sound_played
     
     score = 0; game_won = False; game_over = False; total_bananas = 0
+    door_unlocked_sound_played = False 
     npcs = [] 
     
+
+    audio.play_bgm() 
+
     MAP_WIDTH = random.randint(25, 45)
     max_height = max(15, MAP_WIDTH - 3)
     MAP_HEIGHT = random.randint(15, max_height)
     
-    if MAP_WIDTH > 35 or MAP_HEIGHT > 25:
-        tile_size = 25 
-    else:
-        tile_size = 35
+    if MAP_WIDTH > 35 or MAP_HEIGHT > 25: tile_size = 25 
+    else: tile_size = 35
     
-    try:
-        font_icon = pygame.font.SysFont("segoe ui emoji", int(tile_size * 0.8))
-    except:
-        font_icon = pygame.font.SysFont("arial", int(tile_size * 0.8))
+    try: font_icon = pygame.font.SysFont("segoe ui emoji", int(tile_size * 0.8))
+    except: font_icon = pygame.font.SysFont("arial", int(tile_size * 0.8))
 
     screen_width = MAP_WIDTH * tile_size
     screen_height = MAP_HEIGHT * tile_size + 50
-    
     if screen_height > screen_width:
         MAP_HEIGHT = MAP_WIDTH - 4
         screen_height = MAP_HEIGHT * tile_size + 50
 
     screen = pygame.display.set_mode((screen_width, screen_height))
-    pygame.display.set_caption("ColBan: Zoom Intro Edition 🎥")
+    pygame.display.set_caption("Jim The Monkey")
     
     MAP_DATA = generate_maze_layout(MAP_HEIGHT, MAP_WIDTH)
     
     available_spots = []
     for r in range(MAP_HEIGHT):
         for c in range(MAP_WIDTH):
-            if MAP_DATA[r][c] == '0':
-                available_spots.append((r, c))
+            if MAP_DATA[r][c] == '0': available_spots.append((r, c))
     
     if len(available_spots) / (MAP_WIDTH * MAP_HEIGHT) < 0.25 or len(available_spots) < 15:
-        reset_game()
-        return
+        reset_game(); return
 
     p_pos = random.choice(available_spots)
     available_spots.remove(p_pos)
     player_grid_y, player_grid_x = p_pos
     
-    jumlah_npc = max(1, len(available_spots) // 40)
-    jumlah_npc = min(jumlah_npc, 12) 
-    
+    jumlah_npc = min(max(1, len(available_spots) // 40), 12)
     safe_spots = []
     min_dist = 8
     for (r, c) in available_spots:
         dist = abs(r - player_grid_y) + abs(c - player_grid_x)
-        if dist >= min_dist:
-            safe_spots.append((r, c))
+        if dist >= min_dist: safe_spots.append((r, c))
     
     for i in range(jumlah_npc):
         if safe_spots:
@@ -229,14 +250,12 @@ def reset_game():
             MAP_DATA[r][c] = '2'
             total_bananas += 1
             
-    print(f"Game Ready. Playing Intro Animation...")
-    
     play_zoom_animation()
 
 reset_game()
 
 def main():
-    global player_grid_x, player_grid_y, npcs, score, game_won, game_over
+    global player_grid_x, player_grid_y, npcs, score, game_won, game_over, door_unlocked_sound_played
     clock = pygame.time.Clock()
     running = True
     NPC_MOVE_DELAY = 15; npc_timer = 0
@@ -260,11 +279,19 @@ def main():
                                 if score == total_bananas:
                                     game_won = True
                                     player_grid_x, player_grid_y = new_x, new_y
+                                    
+                                    audio.stop_bgm() 
+                                    audio.play_sfx("win")
                             else:
                                 player_grid_x, player_grid_y = new_x, new_y
                                 if target == '2': 
                                     score += 1
                                     MAP_DATA[new_y][new_x] = '0'
+                                    audio.play_sfx("eat")
+
+        if score == total_bananas and not door_unlocked_sound_played:
+            audio.play_sfx("unlock")
+            door_unlocked_sound_played = True
 
         if not game_won and not game_over:
             npc_timer += 1
@@ -281,7 +308,10 @@ def main():
                                 npc[0], npc[1] = nr, nc 
                                 break 
             for npc in npcs:
-                if player_grid_y == npc[0] and player_grid_x == npc[1]: game_over = True
+                if player_grid_y == npc[0] and player_grid_x == npc[1]: 
+                    game_over = True
+                    audio.stop_bgm() 
+                    audio.play_sfx("die")
 
         render_game_content(screen)
         
@@ -290,7 +320,6 @@ def main():
         else: status = f"{ICON_BANANA}: {score}/{total_bananas} | {ICON_NPC}: {len(npcs)}"
         
         color = GREEN if game_won else (RED if game_over else WHITE)
-
         pygame.draw.rect(screen, BLACK, (0, screen_height - 40, screen_width, 40))
         screen.blit(font_score.render(status, True, color), (10, screen_height - 35))
 
