@@ -66,7 +66,7 @@ ColBan-Game/
 │   └── unlock.wav       # SFX pintu terbuka
 │
 └── dist/                # Folder hasil build (jika dijadikan .exe)
-    └── ColBanGame.exe
+    └── Jim The Monkey.exe
 ```
 
 ## Kontribusi
