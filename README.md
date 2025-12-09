@@ -1,3 +1,4 @@
+<img width="2816" height="1536" alt="Cover-min" src="https://github.com/user-attachments/assets/87f35167-3dd2-4ab3-822c-0da2d3e8190a" />
 # 🍌 Jim The Monkey
 
 ![Python](https://img.shields.io/badge/Python-3.x-blue?style=for-the-badge&logo=python)
