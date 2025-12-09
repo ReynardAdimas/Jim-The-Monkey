@@ -1,4 +1,6 @@
-Beta/Jim The Monkey.exe
-dist 
-build
-Beta.zip
+*.zip 
+*.exe 
+*.pkg 
+build/
+Beta/
+dist/
