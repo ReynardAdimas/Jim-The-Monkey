@@ -3,6 +3,12 @@ import sys
 import random
 import os 
 
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS 
+    except Exception:
+        base_path = os.path.abspath(".") 
+    return os.path.join(base_path, relative_path)
 
 pygame.init()
 pygame.mixer.init()  
@@ -40,17 +46,16 @@ total_bananas = 0; score = 0
 game_won = False; game_over = False
 door_unlocked_sound_played = False 
 
-# --- BAGIAN AUDIO MANAGER ---
 class AudioManager:
     def __init__(self):
         self.sounds = {}
-        self.bgm_file = "bgm.mp3" # Background Music
-        
-        # Load SFX (Sound Effects)
-        self.load_sfx("eat", "eat.wav")
-        self.load_sfx("die", "die.wav")
-        self.load_sfx("win", "win.wav")
-        self.load_sfx("unlock", "unlock.mp3")
+
+        self.bgm_file = resource_path("bgm.mp3")
+        self.load_sfx("eat", resource_path("eat.wav"))
+        self.load_sfx("die", resource_path("die.wav"))
+        self.load_sfx("win", resource_path("win.wav"))
+        self.load_sfx("unlock", resource_path("unlock.mp3"))
+
 
     def load_sfx(self, name, filename):
         if os.path.exists(filename):
