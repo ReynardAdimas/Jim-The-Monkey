@@ -89,8 +89,6 @@ class AudioManager:
 
 audio = AudioManager()
 
-
-
 def generate_maze_layout(rows, cols):
     layout = [['1' for _ in range(cols)] for _ in range(rows)]
     start_x, start_y = cols // 2, rows // 2
@@ -179,6 +177,59 @@ def play_zoom_animation():
         pygame.display.flip()
         clock.tick(60)
 
+def main_menu():
+    
+    menu_width, menu_height = 800, 600
+    screen = pygame.display.set_mode((menu_width, menu_height))
+    pygame.display.set_caption("Jim The Monkey - Main Menu")
+    
+    clock = pygame.time.Clock()
+    
+    
+    title_font = pygame.font.SysFont('arial', 60, bold=True)
+    sub_font = pygame.font.SysFont('arial', 30)
+    info_font = pygame.font.SysFont('segoe ui emoji', 40) 
+
+   
+    audio.play_bgm()
+
+    waiting = True
+    while waiting:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN: 
+                    waiting = False
+                if event.key == pygame.K_q: 
+                    pygame.quit()
+                    sys.exit()
+
+        screen.fill(BLACK)
+        
+        
+        title_text = title_font.render("JIM THE MONKEY 🐒", True, (255, 215, 0))
+        title_rect = title_text.get_rect(center=(menu_width/2, menu_height/2 - 50))
+        
+        start_text = sub_font.render("Press [ENTER] to Start", True, WHITE)
+        start_rect = start_text.get_rect(center=(menu_width/2, menu_height/2 + 20))
+        
+        quit_text = sub_font.render("Press [Q] to Quit", True, (200, 50, 50))
+        quit_rect = quit_text.get_rect(center=(menu_width/2, menu_height/2 + 60))
+
+        deco_text = info_font.render(f"{ICON_PLAYER}   vs   {ICON_NPC}", True, WHITE)
+        deco_rect = deco_text.get_rect(center=(menu_width/2, menu_height/2 - 120))
+
+        screen.blit(title_text, title_rect)
+        screen.blit(start_text, start_rect)
+        screen.blit(quit_text, quit_rect)
+        screen.blit(deco_text, deco_rect)
+
+        pygame.display.flip()
+        clock.tick(30)
+
+
 def reset_game():
     global MAP_DATA, MAP_WIDTH, MAP_HEIGHT, tile_size, screen, screen_width, screen_height
     global player_grid_x, player_grid_y, npcs, font_icon
@@ -187,7 +238,6 @@ def reset_game():
     score = 0; game_won = False; game_over = False; total_bananas = 0
     door_unlocked_sound_played = False 
     npcs = [] 
-    
 
     audio.play_bgm() 
 
@@ -257,7 +307,6 @@ def reset_game():
             
     play_zoom_animation()
 
-reset_game()
 
 def main():
     global player_grid_x, player_grid_y, npcs, score, game_won, game_over, door_unlocked_sound_played
@@ -334,4 +383,6 @@ def main():
     pygame.quit(); sys.exit()
 
 if __name__ == "__main__":
+    main_menu() 
+    reset_game()     
     main()

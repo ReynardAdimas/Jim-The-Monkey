@@ -1,6 +1,7 @@
 *.zip 
 *.exe 
 *.pkg 
+*.png
 build/
 Beta/
 dist/
